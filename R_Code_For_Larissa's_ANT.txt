@@ -1,0 +1,100 @@
+###########################################################################################################
+#############################This code was made by Larissa da Silva Cury (UFRGS)#################################3
+###########################################################################################################
+
+#ANT_ANALYSIS_CODE
+
+##install.packages("ddlyr","tidyverse")
+library(dplyr)
+library(tidyverse)
+library(writexl)
+
+## set work directory
+
+setwd("your wd")
+
+#Read PciBex's function
+
+read.pcibex <- function(filepath, auto.colnames=TRUE, fun.col=function(col,cols){cols[cols==col]<-paste(col,"Ibex",sep=".");return(cols)}) {
+  n.cols <- max(count.fields(filepath,sep=",",quote=NULL),na.rm=TRUE)
+  if (auto.colnames){
+    cols <- c()
+    con <- file(filepath, "r")
+    while ( TRUE ) {
+      line <- readLines(con, n = 1, warn=FALSE)
+      if ( length(line) == 0) {
+        break
+      }
+      m <- regmatches(line,regexec("^# (\\d+)\\. (.+)\\.$",line))[[1]]
+      if (length(m) == 3) {
+        index <- as.numeric(m[2])
+        value <- m[3]
+        if (is.function(fun.col)){
+          cols <- fun.col(value,cols)
+        }
+        cols[index] <- value
+        if (index == n.cols){
+          break
+        }
+      }
+    }
+    close(con)
+    return(read.csv(filepath, comment.char="#", header=FALSE, col.names=cols))
+  }
+  else{
+    return(read.csv(filepath, comment.char="#", header=FALSE, col.names=seq(1:n.cols)))
+  }
+}
+
+# Read in results file
+results <- read.pcibex("results (13).csv")
+
+############################################### create new collumn "Randowm" with 1:n(row)#####################################
+ results1 <- results %>% 
+                       mutate(Random = as.numeric(seq(1:n()))
+   )
+
+########################### run Jeremy's function#################################################################
+
+add_blocks <- function (df,id) {
+  PRACTICE_TO_FIRST <- max(df$Random[df$Label=="instructions_E"])
+  FIRST_TO_SECOND <- max(df$Random[df$Label=="instructions_F"])
+  SECOND_TO_THIRD <- max(df$Random[df$Label=="instructions_G"])
+  df$block <- 0
+  df$block[df$Random>PRACTICE_TO_FIRST] <- 1
+  df$block[df$Random>FIRST_TO_SECOND] <- 2
+  df$block[df$Random>SECOND_TO_THIRD] <- 3
+  return(df)
+}
+
+####################apply the function on the data_frame (create new df called "results_blocks)#####################################
+
+results_blocks <- results1 %>%
+  group_by(id) %>%
+  group_modify(add_blocks)
+
+
+
+########## clean table ########################################
+
+data_results <- results_blocks %>%
+  filter(Parameter %in% c("Key","PressedKey","Key")) %>%   ####filter answers S, K, None
+  select(id,Label,imagens,Value,Parameter,ReactionTime,block) %>% #### filter relevant columns
+  group_by(id) %>%  ####group by id
+  mutate(Answer = case_when(is.na(Value) ~ "0", ####create a new column called "answers" with S, K and 0 (none)
+                            Value == "S" ~ "S",
+                            Value == "K" ~ "K")) %>%
+  select(-Value) %>%  ####erase the old collumn
+  select(id,Label,imagens,Answer,ReactionTime,block) ####filter only the relevant columns 
+
+
+###################################export to Excel############################
+
+write_xlsx(data_results, "C:your directory/Exemplo_Resultados_Novo.xlsx")
+
+
+#Now we can start statistics!!!  
+  
+label <- data_results %>% 
+             count(Label,id,block)
+  
