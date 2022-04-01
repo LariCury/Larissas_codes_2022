@@ -78,7 +78,7 @@ results_blocks <- results1 %>%
 ########## clean table ########################################
 
 data_results <- results_blocks %>%
-  filter(Parameter %in% c("Key","PressedKey","Key")) %>%   ####filter answers S, K, None
+  filter(Parameter %in% c("Key","PressedKey")) %>%   ####filter answers S, K, None
   select(id,Label,imagens,Value,Parameter,ReactionTime,block) %>% #### filter relevant columns
   group_by(id) %>%  ####group by id
   mutate(Answer = case_when(is.na(Value) ~ "0", ####create a new column called "answers" with S, K and 0 (none)
